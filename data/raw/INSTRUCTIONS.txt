@@ -1,0 +1,3 @@
+Upload every week's allocation spreasheets in a folder following the format WE.*day*.*month*.*year* (eg, WE.26.01.25)
+
+Make sure that the format of the allocation sheets are consistent with the sheets in the "Testing" folder.
