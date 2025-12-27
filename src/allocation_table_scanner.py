@@ -11,16 +11,16 @@ import openpyxl
 from scripts.utils import load_font, drawText, load_image, load_images, load_text, draw_alpha, alphabet_converter, scale_pos, Animation
 from scripts.ui_elements import Window, Button, DynamicTextBox, InputBox, set_progress, close_window, change_window_pos_and_dim, check_window, update_ui_elements, ui_process_mouse_button_down, ui_process_keyboard_button_down, render_ui, extract_data, add_window_element, remove_window_element
 
-NAME_FILE_PATH = "log_data/employee_names.json"
-GENERAL_EXCEPTIONS_FILE_PATH = "log_data/general_exceptions.json"
-WEEKLY_EXCEPTIONS_FILE_PATH = 'log_data/weekly_exceptions/'
-BGEN_NUMBERS_FILE_PATH = "log_data/bgen_numbers.json"
-WORK_CODES_FILE_PATH = "log_data/work_codes.json"
-ISO_NUMBERS_FILE_PATH = "log_data/iso_numbers.json"
-ALLOCATION_TABLE_FILE_PATH = "Allocation_Tables/"
+NAMES_FILE_PATH = "config/employee_names.json"
+GENERAL_EXCEPTIONS_FILE_PATH = "config/general_exceptions.json"
+WEEKLY_EXCEPTIONS_FILE_PATH = 'config/weekly_exceptions/'
+VARIATION_NUMBERS_FILE_PATH = "config/variation_numbers.json"
+WORK_CODES_FILE_PATH = "config/work_codes.json"
+ISO_NUMBERS_FILE_PATH = "config/iso_numbers.json"
+ALLOCATION_TABLE_FILE_PATH = "../data/Raw_Allocation_Tables/"
 
-CURRENTYEAR = 25
-SCREENWIDTH = 80
+## Adjust these values based on the current year and how the allocation sheets are structured.
+CURRENTYEAR = 24
 ALLOCATION_TABLE_DIMENSIONS = (26, 12)
 ALLOCATION_TABLE_START_CORNER = (4, 9)
 EMPLOYEE_NAME_COLUMN = 'B'
@@ -72,13 +72,13 @@ class Application(object):
     
     self.application_title = self.fonts['title'].render('BGEN FFENICS HELPER', False, "cyan")
 
-    name_file = open(NAME_FILE_PATH, 'r')
+    name_file = open(NAMES_FILE_PATH, 'r')
     self.employee_names = json.load(name_file)
     name_file.close()
 
-    bgen_numbers_file = open(BGEN_NUMBERS_FILE_PATH, 'r')
-    self.bgen_numbers = set(json.load(bgen_numbers_file))
-    bgen_numbers_file.close()
+    variation_numbers_file = open(VARIATION_NUMBERS_FILE_PATH, 'r')
+    self.bgen_numbers = set(json.load(variation_numbers_file))
+    variation_numbers_file.close()
     ## print(self.bgen_numbers)
 
     work_codes_file = open(WORK_CODES_FILE_PATH, 'r')
@@ -100,14 +100,14 @@ class Application(object):
     }
 
     """
-    name_file = open(NAME_FILE_PATH, 'w')
+    name_file = open(NAMES_FILE_PATH, 'w')
     json.dump(employee_names, name_file)
     name_file.close()
     """
     '''
-    bgen_numbers_file = open(BGEN_NUMBERS_FILE_PATH, 'w')
-    json.dump([203, 120, 1212, 12], bgen_numbers_file)
-    bgen_numbers_file.close()
+    variation_numbers_file = open(VARIATION_NUMBERS_FILE_PATH, 'w')
+    json.dump([203, 120, 1212, 12], variation_numbers_file)
+    variation_numbers_file.close()
     '''
     """
     general_exceptions_file = open(GENERAL_EXCEPTIONS_FILE_PATH, 'w')
@@ -115,7 +115,7 @@ class Application(object):
     general_exceptions_file.close()
     """
 
-  def run_engine(self):
+  def run_engine(self): ## This is the base function of the entire program
     current_scene = ['start_screen', ['05', '05', [1, 1, 1, 1, 1, 0, 0], {'A Millar stores 1 Allocation 5-5-24.xlsm': [[['D12', 'EmployeeNameMissing'], ['D16', 'EmployeeNameMissing'], ['B10', 'InvalidEmployeeName']], [['B12', 'InvalidEmployeeName'], ['B13', 'InvalidEmployeeName']], [], [], [], [], []], 'N DALY Pipefitter Allocation 5-5-24.xlsm': [[], [], [], [], [['Q3', 'InvalidTaskName']], [], []], 'Nights sh 2  Allocation w-e 5-5-24.xlsm': [[], [], [], [['AC3', 'InvalidTaskName']], [], [], []]}]]
     new_scene = ''
     while new_scene != 'quit':
@@ -138,17 +138,17 @@ class Application(object):
       
       current_scene = new_scene
   
-  def save_lists(self, list_name):
+  def save_lists(self, list_name: str):
     match list_name:
       case 'names':
-        name_file = open(NAME_FILE_PATH, 'w')
+        name_file = open(NAMES_FILE_PATH, 'w')
         json.dump(self.employee_names, name_file)
         name_file.close()
 
       case 'bgen_numbers':
-        bgen_numbers_file = open(BGEN_NUMBERS_FILE_PATH, 'w')
-        json.dump(self.bgen_numbers, bgen_numbers_file)
-        bgen_numbers_file.close()
+        variation_numbers_file = open(VARIATION_NUMBERS_FILE_PATH, 'w')
+        json.dump(self.bgen_numbers, variation_numbers_file)
+        variation_numbers_file.close()
       
       case 'work_codes':
         work_codes_file = open(WORK_CODES_FILE_PATH, 'w')
@@ -166,7 +166,7 @@ class Application(object):
         general_exceptions_file.close()
 
       case _:
-        if list_name.find('.json') != 1:
+        if list_name.find('.json') != -1:
           pass
         else:
           print('ERROR: INVALID LIST NAME')
@@ -223,6 +223,8 @@ class Application(object):
 
       progress = 0
 
+      print(f'{ALLOCATION_TABLE_FILE_PATH}{week_folder}')
+
       if not os.path.exists(f'{ALLOCATION_TABLE_FILE_PATH}{week_folder}'):
         print('AllocationTableFileNotFound')
         return 'AllocationTableFileNotFound'
@@ -272,10 +274,13 @@ class Application(object):
                 ## print(current_cell_value)
                 ## print(current_cell_value)
 
-                if current_cell_value != None:
+                if current_cell_value != None: ## the cell is not empty
+
+                  ## Checking if the cell just has white space in it
                   if str(current_cell_value).replace(' ', '') == '' and str(current_cell_value) != '':
                     add_error(worksheet_file, sheet_number, current_cell, 'WhitespaceInCell')
                   
+                  ## Checking if the cell has a non-number value, usually means that it is an absence
                   elif not str(current_cell_value).replace('.', '').isnumeric():
                     if j not in ignore_letter_list:
                       employee_name = read_sheet[f'{EMPLOYEE_NAME_COLUMN}{ALLOCATION_TABLE_START_CORNER[1] + j}'].value

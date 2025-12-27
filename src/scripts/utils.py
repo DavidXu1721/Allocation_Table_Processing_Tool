@@ -1,9 +1,9 @@
 import pygame
 import os
 
-BASE_IMG_PATH = 'data/images/'
-BASE_FONT_PATH = 'data/font/'
-BASE_TEXT_PATH = 'data/text/'
+BASE_IMG_PATH = 'assets/images/'
+BASE_FONT_PATH = 'assets/font/'
+BASE_TEXT_PATH = 'assets/text/'
 
 def load_font(path, size=50):
     font = pygame.font.Font(BASE_FONT_PATH + path, size)

@@ -1,5 +1,4 @@
 import openpyxl
-import pyautogui
 import os
 import time
 import json
@@ -9,12 +8,12 @@ CURRENTYEAR = 25 # Make sure to change this every year
 SCREENWIDTH = 80
 ALLOCATION_TABLE_DIMENSIONS = (26, 12)
 
-NAME_FILE_PATH = "log_data/employee_names.json"
-CODE_FILE_PATH = "log_data/code_to_name.json"
-GENERAL_EXCEPTIONS_FILE_PATH = "log_data/general_exceptions.json"
-WEEKLY_EXCEPTIONS_FILE_PATH = 'log_data/weekly_exceptions/'
-BGEN_NUMBERS_FILE_PATH = "log_data/bgen_numbers.json"
-ISO_NUMBERS_FILE_PATH = "log_data/iso_numbers.json"
+NAME_FILE_PATH = "config/employee_names.json"
+CODE_FILE_PATH = "config/code_to_name.json"
+GENERAL_EXCEPTIONS_FILE_PATH = "config/general_exceptions.json"
+WEEKLY_EXCEPTIONS_FILE_PATH = 'config/weekly_exceptions/'
+VARIATION_NUMBERS_FILE_PATH = "config/variation_numbers.json"
+ISO_NUMBERS_FILE_PATH = "config/iso_numbers.json"
 ALLOCATION_TABLE_FILE_PATH = "Allocation_Tables/"
 
 name_file = open(NAME_FILE_PATH, 'r')
@@ -25,7 +24,7 @@ code_file = open(CODE_FILE_PATH, 'r')
 CODES = json.load(code_file)
 code_file.close()
 
-bgen_numbers_file = open(BGEN_NUMBERS_FILE_PATH, 'r')
+bgen_numbers_file = open(VARIATION_NUMBERS_FILE_PATH, 'r')
 BGEN_NUMBERS = set(json.load(bgen_numbers_file))
 bgen_numbers_file.close()
 ## print(self.bgen_numbers)
@@ -136,7 +135,7 @@ if skip_to_table == '':
 					print(f'{alphabet_converter(4 + i)}{9 + j}', end=' ')
 					### print(f'{alphabet_converter(4 + i)}{9 + j} --- {current_cell}')
 
-					# this checks if the current cell is a number
+					# this checks if the current cell is a number and that the corresponding employee is not a supervisor.
 					if current_cell != None and str(current_cell).replace('.', '').isnumeric() and not '(' in NAMES[read_sheet[f"B{9 + j}"].value.strip()]:	
 						employee_name = read_sheet[f"B{9 + j}"].value
 						log_employee(NAMES[employee_name.strip()])
