@@ -12,9 +12,9 @@ venv/
 *.csv
 
 # Testing
-!**/data/raw/Testing/*
-**/data/raw/Testing/*xlsm#
-**/data/raw/Testing/*xlsx#
+!**/data/Raw_Allocation_Tables/Testing/*
+**/data/Raw_Allocation_Tables/Testing/*xlsm#
+**/data/Raw_Allocation_Tables/Testing/*xlsx#
 
 
 # Logs
