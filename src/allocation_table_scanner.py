@@ -465,7 +465,7 @@ class Application(object):
 
 			'buttons': [Button(self, self.display, (200, 50), (100, 300), txt_align= 'left', txt_content= 'Scan Sheets', buttonID= 'ScanSheetsButton'),
 						Button(self, self.display, (200, 50), (100, 400), txt_align= 'left', txt_content= 'Access Sheets', buttonID= 'AccessSheetsButton'),
-						Button(self, self.display, (200, 50), (100, 500), txt_align= 'left', txt_content= 'Access Absences', buttonID= 'AccessAbsencesButton'),
+						Button(self, self.display, (200, 50), (100, 500), txt_align= 'left', txt_content= 'How to Use', buttonID= 'HowToUseButton'),
 						Button(self, self.display, (200, 50), (100, 600), txt_align= 'left', txt_content= 'Exit', buttonID= 'ExitButton')]
 		}
     
@@ -549,7 +549,11 @@ class Application(object):
                                                                    'position': (5, 5),
                                                                    'loading_barID': 'scanSheetLoadingBar'}
                                                                 ]))
-                      scanned_week_folder = f"WE.{extract_data(self, 'DayInputBox')}.{extract_data(self, 'MonthInputBox')}.{CURRENTYEAR}"
+                      if f"{extract_data(self, 'MonthInputBox')}{extract_data(self, 'DayInputBox')}".upper() == "TEST":
+                        scanned_week_folder = "Testing"
+                      else:
+                        scanned_week_folder = f"WE.{extract_data(self, 'DayInputBox')}.{extract_data(self, 'MonthInputBox')}.{CURRENTYEAR}"
+                      
                       scanned_days = [extract_data(self, 'MondaySwitch'),
                                         extract_data(self, 'TuesdaySwitch'),
                                         extract_data(self, 'WednesdaySwitch'),
@@ -678,6 +682,9 @@ class Application(object):
                                       'txt_content': 'SCAN SHEETS FIRST',
                                       'txt_color': 'white'}])
                           )
+
+                    case 'HowToUseButton':
+                      pass
 
                     case 'ExitButton':
                       pygame.quit()
