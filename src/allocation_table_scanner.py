@@ -116,7 +116,7 @@ class Application(object):
     """
 
   def run_engine(self): ## This is the base function of the entire program
-    current_scene = ['start_screen', ['05', '05', [1, 1, 1, 1, 1, 0, 0], {'A Millar stores 1 Allocation 5-5-24.xlsm': [[['D12', 'EmployeeNameMissing'], ['D16', 'EmployeeNameMissing'], ['B10', 'InvalidEmployeeName']], [['B12', 'InvalidEmployeeName'], ['B13', 'InvalidEmployeeName']], [], [], [], [], []], 'N DALY Pipefitter Allocation 5-5-24.xlsm': [[], [], [], [], [['Q3', 'InvalidTaskName']], [], []], 'Nights sh 2  Allocation w-e 5-5-24.xlsm': [[], [], [], [['AC3', 'InvalidTaskName']], [], [], []]}]]
+    current_scene = ['start_screen', ['30', '06', [1, 0, 0, 0, 0, 0, 0], {'A Millar stores 1 Allocation 5-5-24.xlsm': [[['D12', 'EmployeeNameMissing'], ['D16', 'EmployeeNameMissing'], ['B10', 'InvalidEmployeeName']], [['B12', 'InvalidEmployeeName'], ['B13', 'InvalidEmployeeName']], [], [], [], [], []], 'N DALY Pipefitter Allocation 5-5-24.xlsm': [[], [], [], [], [['Q3', 'InvalidTaskName']], [], []], 'Nights sh 2  Allocation w-e 5-5-24.xlsm': [[], [], [], [['AC3', 'InvalidTaskName']], [], [], []]}]]
     new_scene = ''
     while new_scene != 'quit':
       if current_scene == 'start_screen':
@@ -170,6 +170,93 @@ class Application(object):
           pass
         else:
           print('ERROR: INVALID LIST NAME')
+
+  def pop_up_window(self, pop_up_window: Window):
+    self.ui_elements['windows'].append(pop_up_window)
+      
+    while True:
+      self.display.fill((0, 0, 0))
+
+      self.display.blit(self.application_title, self.application_title.get_rect(midleft = (100, 100)))
+
+      mouse_on_window = update_ui_elements(self)
+
+            ## RENDERING SECTION ##
+
+      render_ui(self)
+
+      for event in pygame.event.get():
+
+        if event.type == pygame.KEYDOWN:
+          ui_process_keyboard_button_down(self, event)
+
+        if event.type == pygame.MOUSEBUTTONDOWN:
+          if event.button == 1:
+            self.player_inputs['mouse'][0] = True
+            ui_event = ui_process_mouse_button_down(self, 1, mouse_on_window)
+            if ui_event != None:
+              match ui_event['type']:
+
+                case 'textbox_conclusion':
+
+                  for action in ui_event['actions']:	
+
+                    match action[0]:
+
+                      case 'remove_window':
+                        
+                        self.ui_elements['windows'].remove(action[1])
+          if event.button == 2:
+            self.player_inputs['mouse'][2] = True
+          if event.button == 3:
+            self.player_inputs['mouse'][1] = True
+
+        if event.type == pygame.MOUSEWHEEL:
+          print(event.y)
+          if event.y > 0:
+            ui_process_mouse_button_down(self, 4, mouse_on_window)  
+          elif event.y < 0:
+            ui_process_mouse_button_down(self, 5, mouse_on_window)  
+
+        if event.type == pygame.MOUSEBUTTONUP:
+          if event.button == 1:
+            self.player_inputs['mouse'][0] = False
+
+            ### I think I'm gonna not do a function for this, it just feels too specialised
+
+            if not mouse_on_window:
+              for button in reversed(self.ui_elements['buttons'].copy()):
+                if button.get_rect().collidepoint(scale_pos(self, pygame.mouse.get_pos(), self.scale_lock)) and button.state == 'clicked':
+                  match button.buttonID:
+
+                    case _:
+                      print('ERROR: INVALID BUTTON ID')
+                      assert False
+                  break			
+
+            else:
+              for window in reversed(self.ui_elements['windows'].copy()):
+
+                for element in reversed(window.elements.copy()):
+                  if element['type'] == 'button':
+                    if element['content'].get_rect(offset=window.position).collidepoint(scale_pos(self, pygame.mouse.get_pos(), self.scale_lock)) and element['content'].state == 'clicked':
+                      if window.windowID == 'SaveSheetPopUpWindow':
+                        print('asd')
+                        close_window(self, 'SaveSheetPopUpWindow')
+                        return element['content'].buttonID
+
+          if event.button == 2:
+            self.player_inputs['mouse'][2] = False
+          if event.button == 3:
+            self.player_inputs['mouse'][1] = False
+
+        if event.type == pygame.QUIT:
+          pygame.quit()
+          sys.exit()
+      
+      self.screen.blit(pygame.transform.scale(self.display, (self.screen.get_width(), self.display.get_height()*self.screen.get_width() / self.display.get_width())), (0, 0))
+
+      pygame.display.update()
 
   def run_startscreen(self, data= ['', '', [0, 0, 0, 0, 0, 0, 0], {}]):
 
@@ -243,6 +330,9 @@ class Application(object):
       }
 
       for worksheet_file in sorted(os.listdir(f'{ALLOCATION_TABLE_FILE_PATH}{week_folder}')):
+        if not worksheet_file.endswith(('.xlsx', '.xlsm')):
+          continue
+
         read_workbook = openpyxl.load_workbook(filename=f'{ALLOCATION_TABLE_FILE_PATH}{week_folder}/{worksheet_file}', read_only=False, data_only=True)
         
         ## the followin
@@ -271,6 +361,10 @@ class Application(object):
               for j in range(ALLOCATION_TABLE_DIMENSIONS[1]):
                 current_cell = f'{alphabet_converter(ALLOCATION_TABLE_START_CORNER[0] + i)}{ALLOCATION_TABLE_START_CORNER[1] + j}'
                 current_cell_value = read_sheet[current_cell].value
+
+                ## print(f"{current_cell_value}|{read_sheet[f'{EMPLOYEE_NAME_COLUMN}{ALLOCATION_TABLE_START_CORNER[1] + j}'].value}|{read_sheet[f'{alphabet_converter(ALLOCATION_TABLE_START_CORNER[0] + i)}{TASK_NAME_ROW}'].value}")
+                ## print(ignore_column_list)
+                ## print(ignore_row_list)
                 ## print(current_cell_value)
                 ## print(current_cell_value)
 
@@ -290,8 +384,9 @@ class Application(object):
 
                       elif str(employee_name).strip() not in self.employee_names.keys() and j not in ignore_row_list:
                         ## print('asd')
+                        ## print(f"{worksheet_file} {DAYS_LIST[sheet_number]} {str(employee_name).strip()}")
                         add_error(worksheet_file, sheet_number, f'{EMPLOYEE_NAME_COLUMN}{ALLOCATION_TABLE_START_CORNER[1] + j}', 'InvalidEmployeeName')
-                        ignore_row_list.append(i)
+                        ignore_row_list.append(j)
 
                       else:
                         pass
@@ -301,16 +396,17 @@ class Application(object):
 
                     check_for_ZZ007(f'{alphabet_converter(ALLOCATION_TABLE_START_CORNER[0] + i)}{TASK_NAME_ROW}')
 
-                  else:
+                  else: ## the cell has a number value, proceed as usual
                     # print(f"{str(current_cell_value).replace('.', '')} is number|| {str(current_cell_value).replace('.', '').isnumeric()}")
                     
                     employee_name = read_sheet[f'{EMPLOYEE_NAME_COLUMN}{ALLOCATION_TABLE_START_CORNER[1] + j}'].value
-                    ## print(employee_name)
+                    ## print(f"{employee_name}|{str(employee_name).strip() not in self.employee_names.keys()}|{j not in ignore_row_list}" )
                     if employee_name == None or str(employee_name).replace(' ', '') == '' and j not in ignore_row_list:
                       add_error(worksheet_file, sheet_number, current_cell, 'EmployeeNameMissing')
                       ignore_row_list.append(j)
 
                     elif str(employee_name).strip() not in self.employee_names.keys() and j not in ignore_row_list:
+                      print(f"{worksheet_file} {DAYS_LIST[sheet_number]} {str(employee_name).strip()}")
                       add_error(worksheet_file, sheet_number, f'{EMPLOYEE_NAME_COLUMN}{ALLOCATION_TABLE_START_CORNER[1] + j}', 'InvalidEmployeeName')
                       ignore_row_list.append(j) 
 
@@ -351,7 +447,7 @@ class Application(object):
 
                       elif task not in self.work_codes and task not in self.iso_numbers and i not in ignore_column_list:
                         ## print(f"{task} not in the list of vaild task names {task not in self.work_codes} and {task not in self.iso_numbers}")
-                        print(f"{worksheet_file} {DAYS_LIST[sheet_number]} {task}")
+                        ## print(f"{worksheet_file} {DAYS_LIST[sheet_number]} {task}")
                         add_error(worksheet_file, sheet_number, f'{alphabet_converter(ALLOCATION_TABLE_START_CORNER[0] + i)}{TASK_NAME_ROW}', 'InvalidTaskName')
                         ignore_column_list.append(i)
                 else:
@@ -684,7 +780,7 @@ class Application(object):
                           )
 
                     case 'HowToUseButton':
-                      pass
+                      return ['open_instructions']
 
                     case 'ExitButton':
                       pygame.quit()
@@ -758,93 +854,6 @@ class Application(object):
           return '' != extract_data(self, f'{cell}InputBox')
         return write_sheet[cell].value != extract_data(self, f'{cell}InputBox')
 
-      def pop_up_window(pop_up_window: Window):
-        self.ui_elements['windows'].append(pop_up_window)
-          
-        while True:
-          self.display.fill((0, 0, 0))
-      
-          self.display.blit(self.application_title, self.application_title.get_rect(midleft = (100, 100)))
-
-          mouse_on_window = update_ui_elements(self)
-
-                ## RENDERING SECTION ##
-
-          render_ui(self)
-
-          for event in pygame.event.get():
-
-            if event.type == pygame.KEYDOWN:
-              ui_process_keyboard_button_down(self, event)
-
-            if event.type == pygame.MOUSEBUTTONDOWN:
-              if event.button == 1:
-                self.player_inputs['mouse'][0] = True
-                ui_event = ui_process_mouse_button_down(self, 1, mouse_on_window)
-                if ui_event != None:
-                  match ui_event['type']:
-
-                    case 'textbox_conclusion':
-
-                      for action in ui_event['actions']:	
-
-                        match action[0]:
-
-                          case 'remove_window':
-                            
-                            self.ui_elements['windows'].remove(action[1])
-              if event.button == 2:
-                self.player_inputs['mouse'][2] = True
-              if event.button == 3:
-                self.player_inputs['mouse'][1] = True
-
-            if event.type == pygame.MOUSEWHEEL:
-              print(event.y)
-              if event.y > 0:
-                ui_process_mouse_button_down(self, 4, mouse_on_window)  
-              elif event.y < 0:
-                ui_process_mouse_button_down(self, 5, mouse_on_window)  
-
-            if event.type == pygame.MOUSEBUTTONUP:
-              if event.button == 1:
-                self.player_inputs['mouse'][0] = False
-
-                ### I think I'm gonna not do a function for this, it just feels too specialised
-
-                if not mouse_on_window:
-                  for button in reversed(self.ui_elements['buttons'].copy()):
-                    if button.get_rect().collidepoint(scale_pos(self, pygame.mouse.get_pos(), self.scale_lock)) and button.state == 'clicked':
-                      match button.buttonID:
-
-                        case _:
-                          print('ERROR: INVALID BUTTON ID')
-                          assert False
-                      break			
-
-                else:
-                  for window in reversed(self.ui_elements['windows'].copy()):
-
-                    for element in reversed(window.elements.copy()):
-                      if element['type'] == 'button':
-                        if element['content'].get_rect(offset=window.position).collidepoint(scale_pos(self, pygame.mouse.get_pos(), self.scale_lock)) and element['content'].state == 'clicked':
-                          if window.windowID == 'SaveSheetPopUpWindow':
-                            print('asd')
-                            close_window(self, 'SaveSheetPopUpWindow')
-                            return element['content'].buttonID
-
-              if event.button == 2:
-                self.player_inputs['mouse'][2] = False
-              if event.button == 3:
-                self.player_inputs['mouse'][1] = False
-
-            if event.type == pygame.QUIT:
-              pygame.quit()
-              sys.exit()
-          
-          self.screen.blit(pygame.transform.scale(self.display, (self.screen.get_width(), self.display.get_height()*self.screen.get_width() / self.display.get_width())), (0, 0))
-
-          pygame.display.update()
-
       write_workbook = openpyxl.load_workbook(filename=f'{ALLOCATION_TABLE_FILE_PATH}{week_folder}/{file}', read_only= False, data_only=True)
       write_workbook.active = sheet_number
       write_sheet = write_workbook.active
@@ -855,7 +864,7 @@ class Application(object):
         match check_error(task_cell, sheet_number):
           case 'BgenNumberNotAdded':
             if is_changed(task_cell):  
-              match pop_up_window(Window(self,self.display, 
+              match self.pop_up_window(Window(self,self.display, 
                                          windowID= 'SaveSheetPopUpWindow',
                                          window_type= 'focused',
                                          dimensions= (800, 600),
@@ -913,7 +922,7 @@ With: {extract_data(self, f'{task_cell}InputBox')}   ?''',
                   assert False
             
             else:
-              match pop_up_window(Window(self,self.display, 
+              match self.pop_up_window(Window(self,self.display, 
                                          windowID= 'SaveSheetPopUpWindow',
                                          window_type= 'focused',
                                          dimensions= (800, 600),
@@ -972,7 +981,7 @@ to the BGEN NUMBER list?''',
 
           case 'InvalidTaskName':
             if is_changed(task_cell):  
-              match pop_up_window(Window(self,self.display, 
+              match self.pop_up_window(Window(self,self.display, 
                                          windowID= 'SaveSheetPopUpWindow',
                                          window_type= 'focused',
                                          dimensions= (800, 600),
@@ -1022,11 +1031,11 @@ With: {extract_data(self, f'{task_cell}InputBox')}   ?''',
                                          ]
                                         )):
                 
-                case 'ProceedButton':
+                case 'ProceedButton': ## unused feature for adding typo fixes to the auto correct
                   ## before_task_name = task_format(write_sheet[task_cell].value)
                   write_sheet[task_cell] = extract_data(self, f'{task_cell}InputBox')
                   """
-                  match pop_up_window(Window(self,self.display, 
+                  match self.pop_up_window(Window(self,self.display, 
                                          windowID= 'SaveSheetPopUpWindow',
                                          window_type= 'focused',
                                          dimensions= (800, 600),
@@ -1116,7 +1125,7 @@ Do you want to add the auto correct:  \n
                   assert False
             
             else:
-              match pop_up_window(Window(self,self.display, 
+              match self.pop_up_window(Window(self,self.display, 
                                          windowID= 'SaveSheetPopUpWindow',
                                          window_type= 'focused',
                                          dimensions= (800, 600),
@@ -1189,7 +1198,7 @@ to the Iso Numbers/Task Codes list?''',
 
           case 'NoError':
             if is_changed(task_cell):  
-              match pop_up_window(Window(self,self.display, 
+              match self.pop_up_window(Window(self,self.display, 
                                          windowID= 'SaveSheetPopUpWindow',
                                          window_type= 'focused',
                                          dimensions= (800, 600),
@@ -1263,7 +1272,7 @@ With: {extract_data(self, f'{task_cell}InputBox')}   ?''',
         match check_error(employee_name_cell, sheet_number):
           case 'InvalidEmployeeName':
             if is_changed(employee_name_cell):
-              match pop_up_window(Window(self,self.display,
+              match self.pop_up_window(Window(self,self.display,
                                          windowID= 'SaveSheetPopUpWindow',
                                          window_type= 'focused',
                                          dimensions= (800, 600),
@@ -1318,7 +1327,7 @@ With: {extract_data(self, f'{employee_name_cell}InputBox')}   ?''',
                   # assert False
 
             else:
-              match pop_up_window(Window(self,self.display,
+              match self.pop_up_window(Window(self,self.display,
                                          windowID= 'SaveSheetPopUpWindow',
                                          window_type= 'focused',
                                          dimensions= (800, 600),
@@ -1374,7 +1383,7 @@ To the code: {extract_data(self, f'{employee_name_cell}CodeInputBox')}   ?''',
                                       
           case 'NoError':
             if is_changed(employee_name_cell):
-              match pop_up_window(Window(self,self.display,
+              match self.pop_up_window(Window(self,self.display,
                                          windowID= 'SaveSheetPopUpWindow',
                                          window_type= 'focused',
                                          dimensions= (800, 600),
