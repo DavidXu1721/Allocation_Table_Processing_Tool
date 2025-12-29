@@ -59,16 +59,19 @@ def scale_pos(game, mouse_pos, scale_locking= [True, False]): ## this takes the 
 
     return (result_mouse_positionx, result_mouse_positiony)
 
-def drawText(surface, text, color, rect, font, aa=False, bkg=None):
+def drawText(surface, text:str, color, rect, font: pygame.font, aa=False, bkg=None, lineSpacing = -2, alignment = 'left'):
     rect = pygame.Rect(rect)
     y = rect.top
-    lineSpacing = -2
 
     # get the height of the font
     fontHeight = font.size("Tg")[1]
 
+    ## print(text)
+
     while text:
         i = 1
+        # print(i)
+        # print(text[i])
 
         # determine if the row of text will be outside our area
         if y + fontHeight > rect.bottom:
@@ -76,6 +79,10 @@ def drawText(surface, text, color, rect, font, aa=False, bkg=None):
 
         # determine maximum width of line
         while font.size(text[:i])[0] < rect.width and i < len(text):
+            if text[i-1] == "\n":
+                # print(i-1)
+                text = text.replace("\n", ' ', 1)
+                break
             i += 1
 
         # if we've wrapped the text, then adjust the wrap to the last word      
@@ -83,18 +90,26 @@ def drawText(surface, text, color, rect, font, aa=False, bkg=None):
             i = text.rfind(" ", 0, i) + 1
 
         # render the line and blit it to the surface
-        if bkg:
-            image = font.render(text[:i], 1, color, bkg)
+        if bkg != None:
+            image: pygame.Surface = font.render(text[:i], 1, color, bkg)
             image.set_colorkey(bkg)
         else:
             image = font.render(text[:i], aa, color)
 
-        surface.blit(image, (rect.left, y))
+        if alignment == 'left':
+            surface.blit(image, (rect.left, y))
+        elif alignment == 'center':
+            surface.blit(image, image.get_rect(midtop = (rect.centerx, y)))
+        elif alignment == 'right':
+            surface.blit(image, image.get_rect(topright = (rect.left, y)))
+
         y += fontHeight + lineSpacing
 
         # remove the text we just blitted
         text = text[i:]
-
+        # print(f'remaining text is {text}')
+        # input()
+    
     return text
 
 def alphabet_converter(number):
