@@ -9,13 +9,17 @@ venv/
 # Data
 *.xlsx
 *.xlsm
+*.xlsx#
+*.xlsm#
 *.csv
 
 # Testing
 !**/data/Raw_Allocation_Tables/Testing/*
-**/data/Raw_Allocation_Tables/Testing/*xlsm#
-**/data/Raw_Allocation_Tables/Testing/*xlsx#
+**/data/Raw_Allocation_Tables/Testing/*.xlsm#
+**/data/Raw_Allocation_Tables/Testing/*.xlsx#
 
+# Configs
+**/config/weekly_exceptions/*.json
 
 # Logs
 logs/

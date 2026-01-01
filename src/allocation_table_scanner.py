@@ -19,6 +19,9 @@ WORK_CODES_FILE_PATH = "config/work_codes.json"
 ISO_NUMBERS_FILE_PATH = "config/iso_numbers.json"
 ALLOCATION_TABLE_FILE_PATH = "../data/Raw_Allocation_Tables/"
 
+## Screen dimensions
+SCREEN_DIMENSIONS = (1024, 768)
+
 ## Adjust these values based on the current year and how the allocation sheets are structured.
 CURRENTYEAR = 24
 ALLOCATION_TABLE_DIMENSIONS = (26, 12)
@@ -35,8 +38,8 @@ class Application(object):
     pygame.init()
 
     pygame.display.set_caption('ffenics_helper')
-    self.screen = pygame.display.set_mode((1024, 768), pygame.RESIZABLE)
-    self.display = pygame.Surface((1024, 768))
+    self.screen = pygame.display.set_mode((SCREEN_DIMENSIONS[0], SCREEN_DIMENSIONS[1]), pygame.RESIZABLE)
+    self.display = pygame.Surface((SCREEN_DIMENSIONS[0], SCREEN_DIMENSIONS[1]))
     
 
     self.clock = pygame.time.Clock()
@@ -46,14 +49,14 @@ class Application(object):
     }
 
     self.fonts = {
-      'title': load_font('Pixeltype.ttf', 60),
-			'subtitle': load_font('Pixeltype.ttf', 30),
-			'button_default': load_font('Pixeltype.ttf', 30),
-      'weekday_button': load_font('Pixeltype.ttf', 40),
-      'input_box_default': load_font('Pixeltype.ttf', 40),
-      'input_box_small': load_font('Pixeltype.ttf', 30),
-      'label': load_font('Pixeltype.ttf', 40),
-			'textbox': load_font('Pixeltype.ttf', 20)
+      'title': load_font('calibri-regular.ttf', 40),
+			'subtitle': load_font('calibri-regular.ttf', 25),
+			'button_default': load_font('calibri-regular.ttf', 25),
+      'weekday_button': load_font('calibri-regular.ttf', 25),
+      'input_box_default': load_font('calibri-regular.ttf', 30),
+      'input_box_small': load_font('calibri-regular.ttf', 25),
+      'label': load_font('calibri-regular.ttf', 25),
+			'textbox': load_font('calibri-regular.ttf', 20)
     }
 
     ### Section for the elements that the application uses, UI elements, entities, etc
@@ -63,7 +66,7 @@ class Application(object):
 		}
 
     self.settings = {
-      'scroll_speed': 30
+      'scroll_speed': 25
 		}
 
     self.player_inputs = {
@@ -120,11 +123,11 @@ class Application(object):
     new_scene = ''
     while new_scene != 'quit':
       if current_scene == 'start_screen':
-        self.scale_lock = [False, False]
+        self.scale_lock = [True, False]
         pygame.draw.rect(self.screen, (0, 0, 0), (0, 0, 10000, 10000))
         new_scene = self.run_startscreen()
       elif current_scene[0] == 'start_screen': ## RESULT FORMAT: ['start_screen', [scanned_month, scanned_week, scanned_days, self.error_markers]]
-        self.scale_lock = [False, False]
+        self.scale_lock = [True, False]
         pygame.draw.rect(self.screen, (0, 0, 0), (0, 0, 10000, 10000))
         new_scene = self.run_startscreen(current_scene[1])
       elif current_scene[0] == 'run_open_sheet': ## RESULT FORMAT: ['run_open_sheet', element['content'].buttonID.replace('.xlsm', ''), scanned_week_folder, scanned_days]
@@ -430,19 +433,19 @@ class Application(object):
                         read_sheet[f'{alphabet_converter(ALLOCATION_TABLE_START_CORNER[0] + i)}{TASK_NAME_ROW}'] = task_exception.upper().replace(' ', '')
                         task = task_exception
 
-                      if task.find('BGENGRAM') != -1:
-                        if task.replace('BGENGRAM', '') == '':
+                      if task.find('VARIATION') != -1:
+                        if task.replace('VARIATION', '') == '':
                           return ['MissingBgenGramNumber', worksheet_file, read_workbook.sheetnames[sheet_number], current_cell]
                         
-                        elif not task.replace('BGENGRAM', '').isnumeric():
-                          ## print(f"{task.replace('BGENGRAM', '')} is not numeric")
-                          add_error(worksheet_file, sheet_number, f'{alphabet_converter(ALLOCATION_TABLE_START_CORNER[0] + i)}{TASK_NAME_ROW}', 'BgenNumberNotAdded')
+                        elif not task.replace('VARIATION', '').isnumeric():
+                          ## print(f"{task.replace('VARIATION', '')} is not numeric")
+                          add_error(worksheet_file, sheet_number, f'{alphabet_converter(ALLOCATION_TABLE_START_CORNER[0] + i)}{TASK_NAME_ROW}', 'VariationNumberNotAdded')
                           ignore_column_list.append(i)
 
-                        elif (int(task.replace('BGENGRAM', '')) not in self.bgen_numbers) and i not in ignore_column_list:
-                          ## print(f"{task.replace('BGENGRAM', '')} not in the list of bgen numbers {int(task.replace('BGENGRAM', '')) not in self.bgen_numbers}")
+                        elif (int(task.replace('VARIATION', '')) not in self.bgen_numbers) and i not in ignore_column_list:
+                          ## print(f"{task.replace('VARIATION', '')} not in the list of bgen numbers {int(task.replace('VARIATION', '')) not in self.bgen_numbers}")
                           
-                          add_error(worksheet_file, sheet_number, f'{alphabet_converter(ALLOCATION_TABLE_START_CORNER[0] + i)}{TASK_NAME_ROW}', 'BgenNumberNotAdded')
+                          add_error(worksheet_file, sheet_number, f'{alphabet_converter(ALLOCATION_TABLE_START_CORNER[0] + i)}{TASK_NAME_ROW}', 'VariationNumberNotAdded')
                           ignore_column_list.append(i)
 
                       elif task not in self.work_codes and task not in self.iso_numbers and i not in ignore_column_list:
@@ -475,7 +478,7 @@ class Application(object):
               pygame.quit()
               sys.exit()
           
-          self.screen.blit(self.display, (0, 0))
+          self.screen.blit(pygame.transform.scale(self.display, (self.screen.get_width(), self.display.get_height()*self.screen.get_width() / self.display.get_width())), (0, 0))
 
           pygame.display.update()
 
@@ -486,7 +489,7 @@ class Application(object):
 
       return 'ScanCompleted'
     
-    self.display = pygame.Surface((1024, 768))
+    self.display = pygame.Surface((SCREEN_DIMENSIONS[0], SCREEN_DIMENSIONS[1]))
 
     self.ui_elements = {
       'windows': [Window(self, self.display, 
@@ -571,14 +574,14 @@ class Application(object):
     
     while True:
       self.display.fill((0, 0, 0))
-  
-      self.display.blit(self.application_title, self.application_title.get_rect(midleft = (100, 100)))
 
       mouse_position = scale_pos(self, pygame.mouse.get_pos(), self.scale_lock)
 
       mouse_on_window = update_ui_elements(self)
 
       			## RENDERING SECTION ##
+
+      self.display.blit(self.application_title, self.application_title.get_rect(midleft = (100, 100)))
 
       render_ui(self)
 
@@ -756,9 +759,10 @@ class Application(object):
                           self.ui_elements['windows'].append(
                             Window(self, self.display, 
                                   windowID= 'SheetListWindow',
-                                  window_type= 'scrollable',
+                                  window_type= 'default',
                                   dimensions= (720, 500),
                                   position= (300, 50),
+                                  is_scrollable= True,
                                   elements= window_buttons)
                           )
 
@@ -769,9 +773,10 @@ class Application(object):
                           self.ui_elements['windows'].append(
                               Window(self, self.display, 
                                     windowID= 'SheetListWindow',
-                                    window_type= 'scrollable',
+                                    window_type= 'default',
                                     dimensions= (720, 500),
                                     position= (300, 50),
+                                    is_scrollable= True,
                                     elements= [{'type': 'label',
                                       'position': (10, 10),
                                       'txt_font': 'label',
@@ -780,7 +785,50 @@ class Application(object):
                           )
 
                     case 'HowToUseButton':
-                      return ['open_instructions']
+                      ## INSTRUCTION PAGES:
+                      current_page = 0
+                      instructions = [
+                        [
+                          {'type': 'label',
+                            'txt_font': 'title',
+                            'txt_content': 'How to Use the Allocation Table Processing Tool',
+                            'txt_color': 'white', 
+                            'position': (25, 25),
+                            'flags': ['in_text_flow']
+                           },
+                          {'type': 'textbox_big', 
+                            'text': f'''Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.''',
+                                          'color': 'white', 
+                                          'dimensions': (1, 2),
+                                          'position': (25, 0),
+                                          'flags': ['stretch_to_contain', 'in_text_flow']
+                          },
+                          {'type': 'textbox', 
+                            'text': f'''Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.''',
+                                          'color': 'white', 
+                                          'dimensions': (1, 2),
+                                          'position': (25, 0),
+                                          'flags': ['stretch_to_contain', 'in_text_flow']
+                          },
+                          {'type': 'textbox', 
+                            'text': f'''AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHH''',
+                                          'color': 'white', 
+                                          'dimensions': (1, 2),
+                                          'position': (25, 0),
+                                          'flags': ['stretch_to_contain', 'in_text_flow']
+                          }
+                        ]
+                      ]
+
+                      self.pop_up_window(Window(self,self.display, 
+                                         windowID= 'HowToUsePopUpWindow',
+                                         window_type= 'focused',
+                                         dimensions= (SCREEN_DIMENSIONS[0]-500, SCREEN_DIMENSIONS[1] - 100),
+                                         position= (50, 50),
+                                         is_scrollable= True,
+                                         elements= instructions[current_page]
+                                        
+                                        ))
 
                     case 'ExitButton':
                       pygame.quit()
@@ -815,7 +863,7 @@ class Application(object):
           pygame.quit()
           sys.exit()
 
-      self.screen.blit(self.display, (0, 0))
+      self.screen.blit(pygame.transform.scale(self.display, (self.screen.get_width(), self.display.get_height()*self.screen.get_width() / self.display.get_width())), (0, 0))
 
       pygame.display.update()
       self.clock.tick(60)
@@ -862,7 +910,7 @@ class Application(object):
         task_cell = f'{alphabet_converter(ALLOCATION_TABLE_START_CORNER[0] + i)}{TASK_NAME_ROW}'
         
         match check_error(task_cell, sheet_number):
-          case 'BgenNumberNotAdded':
+          case 'VariationNumberNotAdded':
             if is_changed(task_cell):  
               match self.pop_up_window(Window(self,self.display, 
                                          windowID= 'SaveSheetPopUpWindow',
@@ -922,6 +970,8 @@ With: {extract_data(self, f'{task_cell}InputBox')}   ?''',
                   assert False
             
             else:
+              pass
+              """
               match self.pop_up_window(Window(self,self.display, 
                                          windowID= 'SaveSheetPopUpWindow',
                                          window_type= 'focused',
@@ -930,8 +980,8 @@ With: {extract_data(self, f'{task_cell}InputBox')}   ?''',
                                          elements= [
                                           {'type': 'textbox_big', 
                                           'text': f'''[{task_cell}] Original Error: {check_error(task_cell, sheet_number)} \n
-Do you want to add the Bgen Number: {task_format(write_sheet[task_cell].value)} \n
-to the BGEN NUMBER list?''',
+Do you want to add the Variation Number: {task_format(write_sheet[task_cell].value)} \n
+to the VARITATION NUMBER list?''',
                                           'color': 'white', 
                                           'dimensions': (700, 400), 
                                           'position': (50, 50)},
@@ -972,12 +1022,12 @@ to the BGEN NUMBER list?''',
                                          ]
                                         )):
                 case 'YesButton':
-                  self.bgen_numbers.add(int(write_sheet[task_cell].value.strip().replace('BGENGRAM', '')))
+                  self.bgen_numbers.add(int(write_sheet[task_cell].value.strip().replace('VARIATION', '')))
                 case 'NoButton':
                   pass
                 case _:
                   print("INVAILD POPUP WINDOW RESULT")
-                  assert False
+                  assert False"""
 
           case 'InvalidTaskName':
             if is_changed(task_cell):  
@@ -1125,6 +1175,7 @@ Do you want to add the auto correct:  \n
                   assert False
             
             else:
+              pass
               match self.pop_up_window(Window(self,self.display, 
                                          windowID= 'SaveSheetPopUpWindow',
                                          window_type= 'focused',
@@ -1321,12 +1372,17 @@ With: {extract_data(self, f'{employee_name_cell}InputBox')}   ?''',
                                           'buttonID': f'CancelButton'}
                                          ]
                                         )):
-                case _:
+                case 'ProceedButton':
+                  write_sheet[task_cell] = extract_data(self, f'{task_cell}InputBox')
+                case 'CancelButton':
                   pass
-                  # print("INVAILD POPUP WINDOW RESULT")
-                  # assert False
+                case _:
+                  print("INVAILD POPUP WINDOW RESULT")
+                  assert False
 
             else:
+              pass
+              """
               match self.pop_up_window(Window(self,self.display,
                                          windowID= 'SaveSheetPopUpWindow',
                                          window_type= 'focused',
@@ -1379,7 +1435,7 @@ To the code: {extract_data(self, f'{employee_name_cell}CodeInputBox')}   ?''',
                 case _:
                   pass
                   # print("INVAILD POPUP WINDOW RESULT")
-                  # assert False
+                  # assert False"""
                                       
           case 'NoError':
             if is_changed(employee_name_cell):
@@ -1432,10 +1488,13 @@ With: {extract_data(self, f'{employee_name_cell}InputBox')}   ?''',
                                           'buttonID': f'CancelButton'}
                                          ]
                                         )):
-                case _:
+                case 'ProceedButton':
+                  write_sheet[task_cell] = extract_data(self, f'{task_cell}InputBox')
+                case 'CancelButton':
                   pass
-                  # print("INVAILD POPUP WINDOW RESULT")
-                  # assert False
+                case _:
+                  print("INVAILD POPUP WINDOW RESULT")
+                  assert False
             
             else:
               pass
@@ -1561,7 +1620,7 @@ With: {extract_data(self, f'{employee_name_cell}InputBox')}   ?''',
           cell_content = str(read_sheet[task_cell].value)
         
         match check_error(task_cell, sheet_number):
-          case 'BgenNumberNotAdded':
+          case 'VariationNumberNotAdded':
             worksheet_input_boxes.append({'type': 'input_textbox/vert_colored',
                                      'dimensions': (50, 300),
                                      'position': tuple(screen_pos),

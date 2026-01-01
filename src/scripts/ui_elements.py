@@ -18,46 +18,40 @@ def change_window_pos_and_dim(game, windowID, position= None, dimensions= None):
             if dimensions != None:
                 window.dimensions = dimensions
                 window.surface = pygame.Surface(window.dimensions, pygame.SRCALPHA, 32)
-            
 
 def update_ui_elements(game):
+    def update_window_elements(window):
+        for element in reversed(window.elements.copy()):
+            if element['type'] == 'button':
+                absolute_offset = [window.position[0] + window.offset[0], window.position[1] + window.offset[1]]
+
+                if element['content'].get_rect(offset=absolute_offset).collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)):
+                    if not game.player_inputs['mouse'][0]:
+                        element['content'].state = 'hover'
+                else: 
+                    element['content'].state = 'idle'              
+
     mouse_on_window = False
 
     for window in reversed(game.ui_elements['windows'].copy()): ## the purpose of reversing is the ensure that the buttons that get updates are the ones that are blitted on top of everything
             
         if window.window_type == 'focused':      ## We honestly should remake this code, but all in all, just make sure that the focused window is to the right of the ui_elements['windows']
-            print('asdddd')
             mouse_on_window = True
 
             if window.get_rect().collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)):
-                
-                for element in reversed(window.elements.copy()):
-                    if element['type'] == 'button':
-                        if element['content'].get_rect(offset=window.position).collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)):
-                            if not game.player_inputs['mouse'][0]:
-                                element['content'].state = 'hover'
-                        else: 
-                            element['content'].state = 'idle'              
+                update_window_elements(window)    
+
                 break
         else:                                                                                   
             if window.get_rect().collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)):
                 mouse_on_window = True
-                for element in reversed(window.elements.copy()):
-                    if element['type'] == 'button':
-                        if element['content'].get_rect(offset=window.position).collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)):
-                            if not game.player_inputs['mouse'][0]:
-                                element['content'].state = 'hover'
-                        else: 
-                            element['content'].state = 'idle'               
+                update_window_elements(window) 
+
                 break
     
+    ## We then update all the windows as usual
     for window in reversed(game.ui_elements['windows'].copy()):
-        for element in reversed(window.elements.copy()):
-            if element['type'] == 'dynamic_textbox':
-                ## print('textbox update')
-                element['content'].update()
-            if element['type'] == 'input_textbox':
-                element['content'].update()
+        window.update()
 
     if not mouse_on_window:
 
@@ -79,7 +73,7 @@ def update_ui_elements(game):
 
 def render_ui(game):
     for button in game.ui_elements['buttons'].copy():
-        button.render()
+        button.render([0, 0])
     for window in game.ui_elements['windows'].copy(): ## we need to render the buttons before the windows, obviously
         if window.window_type != 'focused':
             window.render()
@@ -178,38 +172,30 @@ def ui_process_mouse_button_down(game, mouse_button, mouse_on_window):
 
         case 4:
             if mouse_on_window:
-                focused_window = False
-
+                    
                 for window in reversed(game.ui_elements['windows'].copy()):
-                    if window.window_type == 'focused':
-                        focused_window = True
-                        break
-                
-                if not focused_window:
-                    for window in reversed(game.ui_elements['windows'].copy()):
-                        
-                        if window.window_type == 'scrollable' and window.get_rect().collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)):
-                            shift_distance = min(game.settings['scroll_speed'], 5 - window.get_element_limit('top'))
+                    if window.get_rect().collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)) or window.window_type == "focused":
+
+                        if window.scrollable:
+                            shift_distance = min(game.settings['scroll_speed'], - window.offset[1])
 
                             window.shift_elements(y = shift_distance)
+                            
+                        break
 
         case 5:
             if mouse_on_window:
-                focused_window = False
-
+                    
                 for window in reversed(game.ui_elements['windows'].copy()):
-                    if window.window_type == 'focused':
-                        focused_window = True
-                        break
-                
-                if not focused_window:
-                    for window in reversed(game.ui_elements['windows'].copy()):
-                        
-                        if window.window_type == 'scrollable' and window.get_rect().collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)):
-                            shift_distance = max(-game.settings['scroll_speed'], window.get_rect().height - 5 - window.get_element_limit('bottom'))
+                    if window.get_rect().collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock))  or window.window_type == "focused":
+
+                        if window.scrollable:
+                            shift_distance = max(-game.settings['scroll_speed'], window.get_rect().height - window.get_element_limit('bottom') - window.offset[1])
 
                             window.shift_elements(y = shift_distance)
-
+                        
+                        break
+                         
         case _:
             print("More mouse functions TBA")
 
@@ -264,6 +250,9 @@ def set_progress(game, ui_elementID, progress):
             if element['type'] == 'loading_bar':
                 if element['content'].loading_barID == ui_elementID:
                     element['content'].progress = progress
+
+def calculate_text_y_pos():
+    pass
                 
 def close_window(game, windowID):
     for window in reversed(game.ui_elements['windows'].copy()):
@@ -280,10 +269,16 @@ def add_window_element(game, windowID, element):
 
             match element['type']:
                 case 'textbox':
+                    if 'flags' not in element:
+                        element['flags'] = []
                     window.elements.append(element)
                 case 'textbox_big':
+                    if 'flags' not in element:
+                        element['flags'] = []
                     window.elements.append(element)
                 case 'label':
+                    if 'flags' not in element:
+                        element['flags'] = []
                     window.elements.append(element)
                 case 'button':
                     window.elements.append({'type': 'button', 'content': Button(window.game, window.surface, element['dimensions'], element['position'], element['bg_color'], element['bd_color'], element['txt_color'], element['txt_font'], element['txt_align'], element['txt_content'], element['elements'], element['buttonID'])})
@@ -303,6 +298,9 @@ def add_window_element(game, windowID, element):
                     window.elements.append({'type': 'input_textbox', 'content': InputBox(window.game, window.surface, element['dimensions'], element['position'], bd_color= element['bd_color'], txt_color = element['txt_color'], txt_content= element['txt_content'], input_box_orientation= 'vertical', input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
                 case 'input_textbox/small':
                     window.elements.append({'type': 'input_textbox', 'content': InputBox(window.game, window.surface, element['dimensions'], element['position'], txt_font= 'input_box_small', txt_content= element['txt_content'],  input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
+
+            window.text_update_needed = True
+
 
 def remove_window_element(game, windowID, ui_elementID):
     for window in reversed(game.ui_elements['windows'].copy()):
@@ -348,8 +346,12 @@ class Window(object):
                  window_type= 'default',
                  dimensions= (100, 100), 
                  position= (20, 20), 
+                 text_padding = (20, 20),
+                 text_margin = 10,
                  bg_color= 'black', 
                  bd_color= 'white',
+                 is_scrollable= False,
+                 offset= [0, 0],
                  elements= []):
         self.game = game
         self.parent_surf = parent_surf
@@ -361,8 +363,13 @@ class Window(object):
             self.position = ((self.parent_surf.get_width() - self.dimensions[0])* 0.5, (self.parent_surf.get_height() - self.dimensions[1])* 0.5)
         else:
             self.position = position
+
+        self.text_padding = text_padding
+        self.text_margin = text_margin
         self.bg_color = bg_color
         self.bd_color = bd_color
+        self.scrollable = is_scrollable
+        self.offset = offset
         
         self.surface = pygame.Surface(self.dimensions, pygame.SRCALPHA, 32)
         
@@ -371,10 +378,16 @@ class Window(object):
         for element in elements:
             match element['type']:
                 case 'textbox':
-                    self.elements.append(element)  ## {'type': 'textbox', 'color': '**text color**', 'text': '**text content**', 'dimensions': **textbox dimensions**, 'position': **textbox position**}
+                    if 'flags' not in element:
+                        element['flags'] = []
+                    self.elements.append(element)  ## {'type': 'textbox', 'color': '**text color**', 'text': '**text content**', 'dimensions': **textbox dimensions**, 'position': **textbox position**, 'flags': '**stuff like "in_text_flow" and "stretch_to_contain"'**'}
                 case 'textbox_big':
+                    if 'flags' not in element:
+                        element['flags'] = []
                     self.elements.append(element)
                 case 'label':
+                    if 'flags' not in element:
+                        element['flags'] = []
                     self.elements.append(element)
                 case 'button':
                     self.elements.append({'type': 'button', 'content': Button(self.game, self.surface, element['dimensions'], element['position'], element['bg_color'], element['bd_color'], element['txt_color'], element['txt_font'], element['txt_align'], element['txt_content'], element['elements'], element['buttonID'])})
@@ -397,8 +410,62 @@ class Window(object):
                 case 'input_textbox/small':
                     self.elements.append({'type': 'input_textbox', 'content': InputBox(self.game, self.surface, element['dimensions'], element['position'], txt_font= 'input_box_small', bd_color= element['bd_color'], txt_color = element['txt_color'], txt_content= element['txt_content'],  input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
 
+        self.text_update_needed = True # Just so that we don't end up rendering all the text every frame since it's unnecessary
+
     def update(self):
-        pass ## this may be needed in the future
+
+        if self.text_update_needed:
+            # This a new feature in windows so that I can position text more naturally
+            ## reposition any text elements that are positioned as part of the text flow
+            text_flow_position_y_marker = self.text_padding[1]
+
+            for element in self.elements.copy():
+                if element['type'] in ['textbox', 'textbox_big', 'label']:
+                    ## firstly, I've set it so that if the textbox was in the text flow, then we could make the width of it as large as it could be.
+                    
+                    if 'in_text_flow' in element['flags'] and element['type'] != 'label':
+                        element['dimensions'] = (
+                            self.dimensions[0] - 2 * self.text_padding[0],
+                            element["dimensions"][1]
+                        )
+
+                    ## second check if we need to stretch the textbox vertically to contain all the text
+                    if 'stretch_to_contain' in element['flags'] and element['type'] != 'label':
+                        element['dimensions'] = (
+                            element["dimensions"][0], 
+                            drawText(None, 
+                                    element['text'], 
+                                    element['color'],
+                                    pygame.Rect(0, 0, element['dimensions'][0], element['dimensions'][1]),
+                                    self.game.fonts['textbox' if element['type'] == 'textbox' else 'label'],
+                                    stretch_to_contain= True
+                                    )
+                            )
+                        
+                    if 'in_text_flow' in element['flags']:
+                        
+                        # we have to position it 
+                        element['position'] = [self.text_padding[0], text_flow_position_y_marker]
+
+                        if element['type'] == 'label':
+                            displayed_text = self.game.fonts[element['txt_font']].render(element['txt_content'], False, element['txt_color'])
+                            # print(displayed_text)
+                            text_height = displayed_text.get_rect().height
+
+                        else:
+                            text_height = element['dimensions'][1]
+
+                        text_flow_position_y_marker += (text_height + self.text_margin)
+                        # print(text_flow_position_y_marker) 
+
+            self.text_update_needed = False
+
+        for element in reversed(self.elements.copy()):
+            if element['type'] == 'dynamic_textbox':
+                ## print('textbox update')
+                element['content'].update()
+            if element['type'] == 'input_textbox':
+                element['content'].update()
 
     def get_rect(self, offset= (0, 0)):
         return pygame.Rect(self.position[0] + offset[0], self.position[1] + offset[1], self.dimensions[0], self.dimensions[1])
@@ -423,13 +490,13 @@ class Window(object):
         
         for element in self.elements:
             if element['type'] == 'textbox':  ## Alright, this probably should be a class, but whatever man, like it's not like textboxes are interactable or anything
-                list_of_limits.append(element['position'][i] + j * element['dimensions'][i])
+                list_of_limits.append(element['position'][i] + j * element['dimensions'][i] + 2 * (j - 0.5) * self.text_padding[i])
             elif element['type'] == 'textbox_big':  ## Alright, this probably should be a class, but whatever man, like it's not like textboxes are interactable or anything
-                list_of_limits.append(element['position'][i] + j * element['dimensions'][i])
+                list_of_limits.append(element['position'][i] + j * element['dimensions'][i] + 2 * (j - 0.5) * self.text_padding[i])
             elif element['type'] == 'label':
                 displayed_text = self.game.fonts[element['txt_font']].render(element['txt_content'], False, element['txt_color'])
                 dimensions = (displayed_text.get_rect().width, displayed_text.get_rect().height)
-                list_of_limits.append(element['position'][i] + j * dimensions[i])
+                list_of_limits.append(element['position'][i] + j * dimensions[i] + 2 * (j - 0.5) * self.text_padding[i])
             elif element['type'] in ['button', 'switch', 'loading_bar', 'dynamic_textbox', 'input_textbox']:
                 list_of_limits.append(element['content'].position[i] + j * element['content'].dimensions[i])
             else:
@@ -444,6 +511,12 @@ class Window(object):
             return max(list_of_limits)
         
     def shift_elements(self, x=0, y=0):
+
+        # print(f"SHIFTING {self.windowID}")
+
+        self.offset = [self.offset[0] + x, self.offset[1] + y]
+
+        """
         for element in self.elements:
             if element['type'] == 'textbox': 
                 element['position'] = (element['position'][0] + x, element['position'][1] + y) ## [i] + j * element['dimensions'][i])
@@ -454,9 +527,12 @@ class Window(object):
             elif element['type'] in ['button', 'switch', 'loading_bar', 'dynamic_textbox', 'input_textbox']:
                 element['content'].position = (element['content'].position[0] + x, element['content'].position[1] + y)
             else:
-                print("ERROR: INVALID ELEMENT TYPE!!!")
+                print('ERROR: INVALID ELEMENT TYPE!!!')
+        """
 
     def render(self):
+        # print(self.windowID)
+        # print(self.offset)
         self.surface.fill(pygame.Color(0, 0, 0, 0))
 
         if self.bg_color != 'transparent':
@@ -467,26 +543,28 @@ class Window(object):
                 drawText(self.surface, 
                          element['text'], 
                          element['color'], 
-                         pygame.Rect(element['position'][0], element['position'][1], element['dimensions'][0], element['dimensions'][1]), 
+                         pygame.Rect(element['position'][0] + self.offset[0], element['position'][1] + self.offset[1], element['dimensions'][0], element['dimensions'][1]), 
                          self.game.fonts['textbox'])
             elif element['type'] == 'textbox_big': 
                 drawText(self.surface, 
                          element['text'], 
                          element['color'], 
-                         pygame.Rect(element['position'][0], element['position'][1], element['dimensions'][0], element['dimensions'][1]), 
+                         pygame.Rect(element['position'][0] + self.offset[0], element['position'][1] + self.offset[1], element['dimensions'][0], element['dimensions'][1]), 
                          self.game.fonts['label'])
             elif element['type'] == 'label':
                 displayed_text = self.game.fonts[element['txt_font']].render(element['txt_content'], False, element['txt_color'])
-                self.surface.blit(displayed_text, displayed_text.get_rect(topleft = element['position']))
+                self.surface.blit(displayed_text, displayed_text.get_rect(topleft = [element['position'][0] + self.offset[0], element['position'][1] + self.offset[1]]))
             elif element['type'] in ['button', 'switch', 'loading_bar', 'dynamic_textbox', 'input_textbox']:
-                element['content'].render()
+                element['content'].render(self.offset)
             else:
                 print("ERROR: INVALID ELEMENT TYPE!!!")
 
-        if self.window_type == 'scrollable':
+        if self.scrollable:
             pygame.draw.rect(self.surface, self.bd_color, 
-                             pygame.Rect(self.dimensions[0] - 10, 
-                                         (-self.get_element_limit('top')/(self.get_element_limit('bottom') - self.get_element_limit('top') + 10)) * self.dimensions[1], 10, self.dimensions[1] * self.dimensions[1]/(self.get_element_limit('bottom') - self.get_element_limit('top') + 10)))
+                             pygame.Rect(self.dimensions[0] - 8, 
+                                         (-self.offset[1]/(self.get_element_limit('bottom'))) * self.dimensions[1] + 2, 
+                                         6, 
+                                         self.dimensions[1] * self.dimensions[1]/(self.get_element_limit('bottom')) - 4))
 
         if self.bd_color != 'transparent':
             pygame.draw.rect(self.surface, self.bd_color, pygame.Rect(0, 0, self.dimensions[0], self.dimensions[1]), width= 1)
@@ -539,7 +617,7 @@ class Button(object):
     def get_rect(self, offset= (0, 0)):                     ## I personally think this is a clever way of doing this, trhe offset would be set to the position of the window, if the button was in a window
         return pygame.Rect(self.position[0] + offset[0], self.position[1] + offset[1], self.dimensions[0], self.dimensions[1])
 
-    def render(self):
+    def render(self, offset):
         self.surface.fill(pygame.Color(0, 0, 0, 0))
         
         if self.bg_color != 'transparent':
@@ -575,7 +653,7 @@ class Button(object):
         if self.bd_color != 'transparent':
             pygame.draw.rect(self.surface, self.bd_color[self.state], pygame.Rect(0, 0, self.dimensions[0], self.dimensions[1]), width= 1)
 
-        self.parent_surf.blit(self.surface, self.position)
+        self.parent_surf.blit(self.surface, [self.position[0] + offset[0], self.position[1] + offset[1]])
 
 class Switch(object):
     def __init__(self, game,
@@ -613,7 +691,7 @@ class Switch(object):
     def get_rect(self, offset= (0, 0)):                     ## I personally think this is a clever way of doing this, trhe offset would be set to the position of the window, if the button was in a window
         return pygame.Rect(self.position[0] + offset[0], self.position[1] + offset[1], self.dimensions[0], self.dimensions[1])
 
-    def render(self):
+    def render(self, offset):
         self.surface.fill(pygame.Color(0, 0, 0, 0))
         
         if self.bg_color != 'transparent':
@@ -649,7 +727,7 @@ class Switch(object):
         if self.bd_color != 'transparent':
             pygame.draw.rect(self.surface, self.bd_color[self.state], pygame.Rect(0, 0, self.dimensions[0], self.dimensions[1]), width= 1)
 
-        self.parent_surf.blit(self.surface, self.position)
+        self.parent_surf.blit(self.surface, [self.position[0] + offset[0], self.position[1] + offset[1]])
 
 
 class DynamicTextBox(object):
@@ -690,7 +768,7 @@ class DynamicTextBox(object):
         else:
             self.ready_for_next_stage = True
 
-    def render(self):
+    def render(self, offset):
         self.surface.fill(pygame.Color(0, 0, 0, 0))
 
         if self.bg_color != 'transparent':
@@ -704,7 +782,7 @@ class DynamicTextBox(object):
         if self.bd_color != 'transparent':
             pygame.draw.rect(self.surface, self.bd_color, pygame.Rect(0, 0, self.dimensions[0], self.dimensions[1]), width= 1)
 
-        self.parent_surf.blit(self.surface, self.position)
+        self.parent_surf.blit(self.surface, [self.position[0] + offset[0], self.position[1] + offset[1]])
 
 class InputBox(object): ## So far, all instances of input boxes must be in a window
     
@@ -748,7 +826,7 @@ class InputBox(object): ## So far, all instances of input boxes must be in a win
     def update(self):
         self.insert_marker_timer += 1
 
-    def render(self):
+    def render(self, offset):
         self.surface.fill(pygame.Color(0, 0, 0, 0))
 
         if self.bg_color != 'transparent':
@@ -791,7 +869,7 @@ class InputBox(object): ## So far, all instances of input boxes must be in a win
         if self.bd_color != 'transparent':
             pygame.draw.rect(self.surface, self.bd_color, pygame.Rect(0, 0, self.dimensions[0], self.dimensions[1]), width= 1)
 
-        self.parent_surf.blit(self.surface, self.position)
+        self.parent_surf.blit(self.surface, [self.position[0] + offset[0], self.position[1] + offset[1]])
 
 class LoadingBar(object): ## So far, all instances of input boxes must be in a window
     
@@ -822,7 +900,7 @@ class LoadingBar(object): ## So far, all instances of input boxes must be in a w
     def get_rect(self, offset= (0, 0)):                     ## I don't really see a point in doing this for a progress bar, but whatever
         return pygame.Rect(self.position[0] + offset[0], self.position[1] + offset[1], self.dimensions[0], self.dimensions[1])
 
-    def render(self):
+    def render(self, offset):
         self.surface.fill(pygame.Color(0, 0, 0, 0))
 
         if self.bg_color != 'transparent':
@@ -833,7 +911,7 @@ class LoadingBar(object): ## So far, all instances of input boxes must be in a w
         if self.bd_color != 'transparent':
             pygame.draw.rect(self.surface, self.bd_color, pygame.Rect(0, 0, self.dimensions[0], self.dimensions[1]), width= 1)
 
-        self.parent_surf.blit(self.surface, self.position)
+        self.parent_surf.blit(self.surface, [self.position[0] + offset[0], self.position[1] + offset[1]])
 
 
 
