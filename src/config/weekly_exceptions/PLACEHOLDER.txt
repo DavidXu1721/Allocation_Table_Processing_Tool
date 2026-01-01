@@ -1,0 +1,1 @@
+This is is a placeholder text file so that the "weekly_exceptions" folder will be added to github

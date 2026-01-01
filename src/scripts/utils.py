@@ -59,8 +59,7 @@ def scale_pos(game, mouse_pos, scale_locking= [True, False]): ## this takes the 
 
     return (result_mouse_positionx, result_mouse_positiony)
 
-def drawText(surface, text:str, color, rect, font: pygame.font, aa=False, bkg=None, lineSpacing = -2, alignment = 'left'):
-    rect = pygame.Rect(rect)
+def drawText(surface, text:str, color, rect:pygame.Rect, font: pygame.font, stretch_to_contain= False, aa=True, bkg=None, lineSpacing = -2, alignment = 'left'):
     y = rect.top
 
     # get the height of the font
@@ -75,7 +74,10 @@ def drawText(surface, text:str, color, rect, font: pygame.font, aa=False, bkg=No
 
         # determine if the row of text will be outside our area
         if y + fontHeight > rect.bottom:
-            break
+            if stretch_to_contain:
+                rect.height = y + fontHeight - rect.top
+            else:
+                break
 
         # determine maximum width of line
         while font.size(text[:i])[0] < rect.width and i < len(text):
@@ -87,21 +89,26 @@ def drawText(surface, text:str, color, rect, font: pygame.font, aa=False, bkg=No
 
         # if we've wrapped the text, then adjust the wrap to the last word      
         if i < len(text): 
-            i = text.rfind(" ", 0, i) + 1
+            last_word_index = text.rfind(" ", 0, i) + 1
+        
+        if last_word_index != 0:
+            i = last_word_index ## yeah I know that this results in some really janky textboxes, but just don't do really vertically thin textboxes
 
-        # render the line and blit it to the surface
-        if bkg != None:
-            image: pygame.Surface = font.render(text[:i], 1, color, bkg)
-            image.set_colorkey(bkg)
-        else:
-            image = font.render(text[:i], aa, color)
+        # render the line and blit it to the surface (we can set the surface to None to check if the text fits or how much we need to stretch it or whatever)
+        if surface != None:
 
-        if alignment == 'left':
-            surface.blit(image, (rect.left, y))
-        elif alignment == 'center':
-            surface.blit(image, image.get_rect(midtop = (rect.centerx, y)))
-        elif alignment == 'right':
-            surface.blit(image, image.get_rect(topright = (rect.left, y)))
+            if bkg != None:
+                image: pygame.Surface = font.render(text[:i], 1, color, bkg)
+                image.set_colorkey(bkg)
+            else:
+                image = font.render(text[:i], aa, color)
+
+            if alignment == 'left':
+                surface.blit(image, (rect.left, y))
+            elif alignment == 'center':
+                surface.blit(image, image.get_rect(midtop = (rect.centerx, y)))
+            elif alignment == 'right':
+                surface.blit(image, image.get_rect(topright = (rect.left, y)))
 
         y += fontHeight + lineSpacing
 
@@ -110,7 +117,10 @@ def drawText(surface, text:str, color, rect, font: pygame.font, aa=False, bkg=No
         # print(f'remaining text is {text}')
         # input()
     
-    return text
+    if stretch_to_contain:
+        return rect.height
+    else:
+        return text
 
 def alphabet_converter(number):
 	# The alphabet numbering system is just base 26 but you turn the 0 into the Z and take one index from the letter to the left
