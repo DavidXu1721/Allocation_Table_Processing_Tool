@@ -19,13 +19,18 @@ def change_window_pos_and_dim(game, windowID, position= None, dimensions= None):
                 window.dimensions = dimensions
                 window.surface = pygame.Surface(window.dimensions, pygame.SRCALPHA, 32)
 
+def get_absolute_offset(element, window):
+    if 'fixed' in element.flags:
+        return window.position
+    else:
+        return [window.position[0] + window.offset[0], window.position[1] + window.offset[1]]
+
 def update_ui_elements(game):
     def update_window_elements(window):
         for element in reversed(window.elements.copy()):
             if element['type'] == 'button':
-                absolute_offset = [window.position[0] + window.offset[0], window.position[1] + window.offset[1]]
 
-                if element['content'].get_rect(offset=absolute_offset).collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)):
+                if element['content'].get_rect(offset= get_absolute_offset(element['content'], window)).collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)):
                     if not game.player_inputs['mouse'][0]:
                         element['content'].state = 'hover'
                 else: 
@@ -116,17 +121,17 @@ def ui_process_mouse_button_down(game, mouse_button, mouse_on_window):
 
                         for element in reversed(window.elements.copy()):
                             if element['type'] == 'button':
-                                if element['content'].get_rect(offset=window.position).collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)) and element['content'].state == 'hover':
+                                if element['content'].get_rect(offset= get_absolute_offset(element['content'], window)).collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)) and element['content'].state == 'hover':
                                     element['content'].state = 'clicked'
                                     clicked_button = True
                                     break
                             if element['type'] == 'switch':
-                                if element['content'].get_rect(offset=window.position).collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)):
+                                if element['content'].get_rect(offset= get_absolute_offset(element['content'], window)).collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)):
                                     switch_options = [1, 0]
                                     element['content'].state = switch_options[element['content'].state]
                                     break
                             if element['type'] == 'input_textbox':
-                                if element['content'].get_rect(offset=window.position).collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)):
+                                if element['content'].get_rect(offset= get_absolute_offset(element['content'], window)).collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)):
                                     element['content'].active = True
                                     element['content'].text_cursor_location = len(element['content'].txt_content)
                                     clicked_button = True
@@ -138,17 +143,17 @@ def ui_process_mouse_button_down(game, mouse_button, mouse_on_window):
 
                         for element in reversed(window.elements.copy()):
                             if element['type'] == 'button':
-                                if element['content'].get_rect(offset=window.position).collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)) and element['content'].state == 'hover':
+                                if element['content'].get_rect(offset= get_absolute_offset(element['content'], window)).collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)) and element['content'].state == 'hover':
                                     element['content'].state = 'clicked'
                                     clicked_button = True
                                     break
                             if element['type'] == 'switch':
-                                if element['content'].get_rect(offset=window.position).collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)):
+                                if element['content'].get_rect(offset= get_absolute_offset(element['content'], window)).collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)):
                                     switch_options = [1, 0]
                                     element['content'].state = switch_options[element['content'].state]
                                     break
                             if element['type'] == 'input_textbox':
-                                if element['content'].get_rect(offset=window.position).collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)):
+                                if element['content'].get_rect(offset= get_absolute_offset(element['content'], window)).collidepoint(scale_pos(game, pygame.mouse.get_pos(), game.scale_lock)):
                                     element['content'].active = True
                                     element['content'].text_cursor_location = len(element['content'].txt_content)
                                     clicked_button = True
@@ -266,38 +271,36 @@ def add_window_element(game, windowID, element):
     for window in reversed(game.ui_elements['windows'].copy()):
 
         if window.windowID == windowID:
+            if 'flags' not in element:
+                element['flags'] = []
 
             match element['type']:
                 case 'textbox':
-                    if 'flags' not in element:
-                        element['flags'] = []
                     window.elements.append(element)
                 case 'textbox_big':
-                    if 'flags' not in element:
-                        element['flags'] = []
                     window.elements.append(element)
                 case 'label':
-                    if 'flags' not in element:
-                        element['flags'] = []
                     window.elements.append(element)
                 case 'button':
-                    window.elements.append({'type': 'button', 'content': Button(window.game, window.surface, element['dimensions'], element['position'], element['bg_color'], element['bd_color'], element['txt_color'], element['txt_font'], element['txt_align'], element['txt_content'], element['elements'], element['buttonID'])})
+                    window.elements.append({'type': 'button', 'content': Button(window.game, window.surface, element['dimensions'], element['position'], element['bg_color'], element['bd_color'], element['txt_color'], element['txt_font'], element['txt_align'], element['txt_content'], element['flags'], element['elements'], element['buttonID'])})
                 case 'switch/off':
-                    window.elements.append({'type': 'switch', 'content': Switch(window.game, window.surface, element['dimensions'], element['position'], txt_font=element['txt_font'], txt_content=element['txt_content'], switchID=element['switchID'])})
+                    window.elements.append({'type': 'switch', 'content': Switch(window.game, window.surface, element['dimensions'], element['position'], txt_font=element['txt_font'], txt_content=element['txt_content'], flags = element['flags'], switchID=element['switchID'])})
+                case 'switch/on':
+                    window.elements.append({'type': 'switch', 'content': Switch(window.game, window.surface, element['dimensions'], element['position'], txt_font=element['txt_font'], txt_content=element['txt_content'],flags = element['flags'], state= 1, switchID=element['switchID'])})
                 case 'loading_bar/default':
-                    window.elements.append({'type': 'loading_bar', 'content': LoadingBar(window.game, window.surface, dimensions= element['dimensions'], position= element['position'], loading_barID= element['loading_barID'])})
+                    window.elements.append({'type': 'loading_bar', 'content': LoadingBar(window.game, window.surface, dimensions= element['dimensions'], position= element['position'],flags= element['flags'], loading_barID= element['loading_barID'])})
                 case 'dynam_textbox/default':
-                    window.elements.append({'type': 'dynamic_textbox', 'content': DynamicTextBox(window.game, window.surface, element['dimensions'], element['position'], txt_content= element['txt_content'])}) 
+                    window.elements.append({'type': 'dynamic_textbox', 'content': DynamicTextBox(window.game, window.surface, element['dimensions'], element['position'], txt_content= element['txt_content'], flags= element['flags'])}) 
                 case 'input_textbox/default':
-                    window.elements.append({'type': 'input_textbox', 'content': InputBox(window.game, window.surface, element['dimensions'], element['position'], txt_content= element['txt_content'], input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
+                    window.elements.append({'type': 'input_textbox', 'content': InputBox(window.game, window.surface, element['dimensions'], element['position'], txt_content= element['txt_content'], flags= element['flags'], input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
                 case 'input_textbox/vert':
-                    window.elements.append({'type': 'input_textbox', 'content': InputBox(window.game, window.surface, element['dimensions'], element['position'], txt_content= element['txt_content'], input_box_orientation= 'vertical', input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
+                    window.elements.append({'type': 'input_textbox', 'content': InputBox(window.game, window.surface, element['dimensions'], element['position'], txt_content= element['txt_content'], flags= element['flags'],input_box_orientation= 'vertical', input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
                 case 'input_textbox/hori_colored':
-                    window.elements.append({'type': 'input_textbox', 'content': InputBox(window.game, window.surface, element['dimensions'], element['position'], bd_color= element['bd_color'], txt_color = element['txt_color'], txt_content= element['txt_content'], input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
+                    window.elements.append({'type': 'input_textbox', 'content': InputBox(window.game, window.surface, element['dimensions'], element['position'], bd_color= element['bd_color'], txt_color = element['txt_color'], txt_content= element['txt_content'], flags= element['flags'], input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
                 case 'input_textbox/vert_colored':
-                    window.elements.append({'type': 'input_textbox', 'content': InputBox(window.game, window.surface, element['dimensions'], element['position'], bd_color= element['bd_color'], txt_color = element['txt_color'], txt_content= element['txt_content'], input_box_orientation= 'vertical', input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
+                    window.elements.append({'type': 'input_textbox', 'content': InputBox(window.game, window.surface, element['dimensions'], element['position'], bd_color= element['bd_color'], txt_color = element['txt_color'], txt_content= element['txt_content'], flags= element['flags'], input_box_orientation= 'vertical', input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
                 case 'input_textbox/small':
-                    window.elements.append({'type': 'input_textbox', 'content': InputBox(window.game, window.surface, element['dimensions'], element['position'], txt_font= 'input_box_small', txt_content= element['txt_content'],  input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
+                    window.elements.append({'type': 'input_textbox', 'content': InputBox(window.game, window.surface, element['dimensions'], element['position'], txt_font= 'input_box_small', bd_color= element['bd_color'], txt_color = element['txt_color'], txt_content= element['txt_content'], flags= element['flags'], input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
 
             window.text_update_needed = True
 
@@ -376,39 +379,35 @@ class Window(object):
         self.elements = []                 # I think this might be kind of retarded
 
         for element in elements:
+            if 'flags' not in element:
+                element['flags'] = []
             match element['type']:
                 case 'textbox':
-                    if 'flags' not in element:
-                        element['flags'] = []
                     self.elements.append(element)  ## {'type': 'textbox', 'color': '**text color**', 'text': '**text content**', 'dimensions': **textbox dimensions**, 'position': **textbox position**, 'flags': '**stuff like "in_text_flow" and "stretch_to_contain"'**'}
                 case 'textbox_big':
-                    if 'flags' not in element:
-                        element['flags'] = []
                     self.elements.append(element)
                 case 'label':
-                    if 'flags' not in element:
-                        element['flags'] = []
                     self.elements.append(element)
                 case 'button':
-                    self.elements.append({'type': 'button', 'content': Button(self.game, self.surface, element['dimensions'], element['position'], element['bg_color'], element['bd_color'], element['txt_color'], element['txt_font'], element['txt_align'], element['txt_content'], element['elements'], element['buttonID'])})
+                    self.elements.append({'type': 'button', 'content': Button(self.game, self.surface, element['dimensions'], element['position'], element['bg_color'], element['bd_color'], element['txt_color'], element['txt_font'], element['txt_align'], element['txt_content'], element['flags'], element['elements'], element['buttonID'])})
                 case 'switch/off':
-                    self.elements.append({'type': 'switch', 'content': Switch(self.game, self.surface, element['dimensions'], element['position'], txt_font=element['txt_font'], txt_content=element['txt_content'], switchID=element['switchID'])})
+                    self.elements.append({'type': 'switch', 'content': Switch(self.game, self.surface, element['dimensions'], element['position'], txt_font=element['txt_font'], txt_content=element['txt_content'], flags = element['flags'], switchID=element['switchID'])})
                 case 'switch/on':
-                    self.elements.append({'type': 'switch', 'content': Switch(self.game, self.surface, element['dimensions'], element['position'], txt_font=element['txt_font'], txt_content=element['txt_content'], state= 1,switchID=element['switchID'])})
+                    self.elements.append({'type': 'switch', 'content': Switch(self.game, self.surface, element['dimensions'], element['position'], txt_font=element['txt_font'], txt_content=element['txt_content'],flags = element['flags'], state= 1, switchID=element['switchID'])})
                 case 'loading_bar/default':
-                    self.elements.append({'type': 'loading_bar', 'content': LoadingBar(self.game, self.surface, dimensions= element['dimensions'], position= element['position'], loading_barID= element['loading_barID'])})
+                    self.elements.append({'type': 'loading_bar', 'content': LoadingBar(self.game, self.surface, dimensions= element['dimensions'], position= element['position'],flags= element['flags'], loading_barID= element['loading_barID'])})
                 case 'dynam_textbox/default':
-                    self.elements.append({'type': 'dynamic_textbox', 'content': DynamicTextBox(self.game, self.surface, element['dimensions'], element['position'], txt_content= element['txt_content'])}) 
+                    self.elements.append({'type': 'dynamic_textbox', 'content': DynamicTextBox(self.game, self.surface, element['dimensions'], element['position'], txt_content= element['txt_content'], flags= element['flags'])}) 
                 case 'input_textbox/default':
-                    self.elements.append({'type': 'input_textbox', 'content': InputBox(self.game, self.surface, element['dimensions'], element['position'], txt_content= element['txt_content'], input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
+                    self.elements.append({'type': 'input_textbox', 'content': InputBox(self.game, self.surface, element['dimensions'], element['position'], txt_content= element['txt_content'], flags= element['flags'], input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
                 case 'input_textbox/vert':
-                    self.elements.append({'type': 'input_textbox', 'content': InputBox(self.game, self.surface, element['dimensions'], element['position'], txt_content= element['txt_content'], input_box_orientation= 'vertical', input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
+                    self.elements.append({'type': 'input_textbox', 'content': InputBox(self.game, self.surface, element['dimensions'], element['position'], txt_content= element['txt_content'], flags= element['flags'],input_box_orientation= 'vertical', input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
                 case 'input_textbox/hori_colored':
-                    self.elements.append({'type': 'input_textbox', 'content': InputBox(self.game, self.surface, element['dimensions'], element['position'], bd_color= element['bd_color'], txt_color = element['txt_color'], txt_content= element['txt_content'], input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
+                    self.elements.append({'type': 'input_textbox', 'content': InputBox(self.game, self.surface, element['dimensions'], element['position'], bd_color= element['bd_color'], txt_color = element['txt_color'], txt_content= element['txt_content'], flags= element['flags'], input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
                 case 'input_textbox/vert_colored':
-                    self.elements.append({'type': 'input_textbox', 'content': InputBox(self.game, self.surface, element['dimensions'], element['position'], bd_color= element['bd_color'], txt_color = element['txt_color'], txt_content= element['txt_content'], input_box_orientation= 'vertical', input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
+                    self.elements.append({'type': 'input_textbox', 'content': InputBox(self.game, self.surface, element['dimensions'], element['position'], bd_color= element['bd_color'], txt_color = element['txt_color'], txt_content= element['txt_content'], flags= element['flags'], input_box_orientation= 'vertical', input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
                 case 'input_textbox/small':
-                    self.elements.append({'type': 'input_textbox', 'content': InputBox(self.game, self.surface, element['dimensions'], element['position'], txt_font= 'input_box_small', bd_color= element['bd_color'], txt_color = element['txt_color'], txt_content= element['txt_content'],  input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
+                    self.elements.append({'type': 'input_textbox', 'content': InputBox(self.game, self.surface, element['dimensions'], element['position'], txt_font= 'input_box_small', bd_color= element['bd_color'], txt_color = element['txt_color'], txt_content= element['txt_content'], flags= element['flags'], input_boxID= element['input_boxID'], char_limit= element['char_limit'])}) 
 
         self.text_update_needed = True # Just so that we don't end up rendering all the text every frame since it's unnecessary
 
@@ -508,6 +507,7 @@ class Window(object):
         if j == 0:
             return min(list_of_limits)
         else:
+            list_of_limits.append(self.dimensions[1])
             return max(list_of_limits)
         
     def shift_elements(self, x=0, y=0):
@@ -592,6 +592,7 @@ class Button(object):
                  txt_font= 'button_default',
                  txt_align= 'center',                         ## alright, look, I'm gonna have to stop this overengineering at some point, I'm not going to abstract textboxes into every button and instead make it intrinsic
                  txt_content= '',
+                 flags= [],
                  elements= [],
                  buttonID= 'UNASSIGNED'                       ## this is what gets returned to the game when the button is pressed
                  ):
@@ -607,6 +608,7 @@ class Button(object):
         self.txt_font = txt_font
         self.txt_align = txt_align
         self.txt_content = txt_content
+        self.flags = flags
         self.elements = elements
         self.buttonID = buttonID 
 
@@ -653,7 +655,10 @@ class Button(object):
         if self.bd_color != 'transparent':
             pygame.draw.rect(self.surface, self.bd_color[self.state], pygame.Rect(0, 0, self.dimensions[0], self.dimensions[1]), width= 1)
 
-        self.parent_surf.blit(self.surface, [self.position[0] + offset[0], self.position[1] + offset[1]])
+        if 'fixed' in self.flags:
+            self.parent_surf.blit(self.surface, self.position)
+        else:
+            self.parent_surf.blit(self.surface, [self.position[0] + offset[0], self.position[1] + offset[1]])
 
 class Switch(object):
     def __init__(self, game,
@@ -667,6 +672,7 @@ class Switch(object):
                  txt_content= '', 
                  txt_align= 'center',
                  state= 0,
+                 flags= [],
                  elements= [],
                  switchID= 'UNASSIGNED'           
                  ):
@@ -681,6 +687,7 @@ class Switch(object):
         self.txt_font = txt_font
         self.txt_content = txt_content
         self.txt_align = txt_align
+        self.flags = flags
         self.elements = elements
         self.switchID = switchID
 
@@ -727,7 +734,10 @@ class Switch(object):
         if self.bd_color != 'transparent':
             pygame.draw.rect(self.surface, self.bd_color[self.state], pygame.Rect(0, 0, self.dimensions[0], self.dimensions[1]), width= 1)
 
-        self.parent_surf.blit(self.surface, [self.position[0] + offset[0], self.position[1] + offset[1]])
+        if 'fixed' in self.flags:
+            self.parent_surf.blit(self.surface, self.position)
+        else:
+            self.parent_surf.blit(self.surface, [self.position[0] + offset[0], self.position[1] + offset[1]])
 
 
 class DynamicTextBox(object):
@@ -739,7 +749,8 @@ class DynamicTextBox(object):
                  bd_color= 'transparent',
                  txt_color= 'white',
                  txt_font= 'textbox',                   
-                 txt_content= '',            
+                 txt_content= '',
+                 flags= []        
                  ):
         self.game = game
         self.parent_surf = parent_surf
@@ -751,6 +762,7 @@ class DynamicTextBox(object):
         self.txt_color = txt_color
         self.txt_font = txt_font
         self.txt_content = txt_content
+        self.flags = flags
 
         self.stage = 0
         self.visible_txt = ''
@@ -782,7 +794,10 @@ class DynamicTextBox(object):
         if self.bd_color != 'transparent':
             pygame.draw.rect(self.surface, self.bd_color, pygame.Rect(0, 0, self.dimensions[0], self.dimensions[1]), width= 1)
 
-        self.parent_surf.blit(self.surface, [self.position[0] + offset[0], self.position[1] + offset[1]])
+        if 'fixed' in self.flags:
+            self.parent_surf.blit(self.surface, self.position)
+        else:
+            self.parent_surf.blit(self.surface, [self.position[0] + offset[0], self.position[1] + offset[1]])
 
 class InputBox(object): ## So far, all instances of input boxes must be in a window
     
@@ -796,6 +811,7 @@ class InputBox(object): ## So far, all instances of input boxes must be in a win
                  txt_font= 'input_box_default',                   
                  txt_content= '',
                  input_box_orientation= 'horizontal',
+                 flags= [],
                  input_boxID= 'UNASSIGNED',
                  char_limit= None
                  ):
@@ -811,6 +827,7 @@ class InputBox(object): ## So far, all instances of input boxes must be in a win
         self.txt_font = txt_font
         self.txt_content = txt_content
         self.input_box_orientation = input_box_orientation
+        self.flags = flags
         self.input_boxID = input_boxID
         self.char_limit = char_limit
 
@@ -869,7 +886,10 @@ class InputBox(object): ## So far, all instances of input boxes must be in a win
         if self.bd_color != 'transparent':
             pygame.draw.rect(self.surface, self.bd_color, pygame.Rect(0, 0, self.dimensions[0], self.dimensions[1]), width= 1)
 
-        self.parent_surf.blit(self.surface, [self.position[0] + offset[0], self.position[1] + offset[1]])
+        if 'fixed' in self.flags:
+            self.parent_surf.blit(self.surface, self.position)
+        else:
+            self.parent_surf.blit(self.surface, [self.position[0] + offset[0], self.position[1] + offset[1]])
 
 class LoadingBar(object): ## So far, all instances of input boxes must be in a window
     
@@ -880,6 +900,7 @@ class LoadingBar(object): ## So far, all instances of input boxes must be in a w
                  bg_color= 'black', 
                  bd_color= 'white',
                  bar_color= 'white',
+                 flags= [],
                  loading_barID= 'UNASSIGNED'
                  ):
         
@@ -891,6 +912,7 @@ class LoadingBar(object): ## So far, all instances of input boxes must be in a w
         self.bg_color = bg_color
         self.bd_color = bd_color
         self.bar_color = bar_color
+        self.flags = flags
 
         self.loading_barID = loading_barID
         self.progress = 0
@@ -911,7 +933,10 @@ class LoadingBar(object): ## So far, all instances of input boxes must be in a w
         if self.bd_color != 'transparent':
             pygame.draw.rect(self.surface, self.bd_color, pygame.Rect(0, 0, self.dimensions[0], self.dimensions[1]), width= 1)
 
-        self.parent_surf.blit(self.surface, [self.position[0] + offset[0], self.position[1] + offset[1]])
+        if 'fixed' in self.flags:
+            self.parent_surf.blit(self.surface, self.position)
+        else:
+            self.parent_surf.blit(self.surface, [self.position[0] + offset[0], self.position[1] + offset[1]])
 
 
 
