@@ -9,7 +9,7 @@ from textwrap import dedent, shorten, wrap
 import json
 import openpyxl
 from scripts.utils import load_font, drawText, load_image, load_images, load_text, draw_alpha, alphabet_converter, scale_pos, Animation
-from scripts.ui_elements import Window, Button, DynamicTextBox, InputBox, set_progress, close_window, change_window_pos_and_dim, check_window, update_ui_elements, ui_process_mouse_button_down, ui_process_keyboard_button_down, render_ui, extract_data, add_window_element, remove_window_element
+from scripts.ui_elements import Window, Button, DynamicTextBox, InputBox, set_progress, close_window, change_window_pos_and_dim, check_window, get_absolute_offset, update_ui_elements, ui_process_mouse_button_down, ui_process_keyboard_button_down, render_ui, extract_data, add_window_element, remove_window_element
 
 NAMES_FILE_PATH = "config/employee_names.json"
 GENERAL_EXCEPTIONS_FILE_PATH = "config/general_exceptions.json"
@@ -242,7 +242,7 @@ class Application(object):
 
                 for element in reversed(window.elements.copy()):
                   if element['type'] == 'button':
-                    if element['content'].get_rect(offset=window.position).collidepoint(scale_pos(self, pygame.mouse.get_pos(), self.scale_lock)) and element['content'].state == 'clicked':
+                    if element['content'].get_rect(offset= get_absolute_offset(element['content'], window)).collidepoint(scale_pos(self, pygame.mouse.get_pos(), self.scale_lock)) and element['content'].state == 'clicked':
                       if window.windowID == 'SaveSheetPopUpWindow':
                         print('asd')
                         close_window(self, 'SaveSheetPopUpWindow')
@@ -349,6 +349,9 @@ class Application(object):
 
         for day in days:
           num_of_days_selected += day
+        
+        if num_of_days_selected == 0:
+          return 'NoDaysSelected'
 
         for sheet_number in range(7):
           if days[sheet_number] == 1:
@@ -567,8 +570,11 @@ class Application(object):
 						Button(self, self.display, (200, 50), (100, 500), txt_align= 'left', txt_content= 'How to Use', buttonID= 'HowToUseButton'),
 						Button(self, self.display, (200, 50), (100, 600), txt_align= 'left', txt_content= 'Exit', buttonID= 'ExitButton')]
 		}
-    
-    scanned_week_folder = f"WE.{data[0]}.{data[1]}.{CURRENTYEAR}"
+
+    if f"{data[1]}{data[0]}".upper() == "TEST":
+      scanned_week_folder = "Testing"
+    else:
+      scanned_week_folder = f"WE.{data[0]}.{data[1]}.{CURRENTYEAR}"
     scanned_days = data[2]
     self.error_markers = data[3]
     
@@ -684,6 +690,16 @@ class Application(object):
                                       'txt_color': 'white'},)
                           change_window_pos_and_dim(self, 'scanSheetStatusWindow', dimensions= (500, 50))
                           self.scan_needed = False
+                        
+                        case 'NoDaysSelected': 
+                          remove_window_element(self, 'scanSheetStatusWindow','scanSheetLoadingBar')
+                          add_window_element(self, 'scanSheetStatusWindow', 
+                                      {'type': 'label',
+                                      'position': (5, 5),
+                                      'txt_font': 'label',
+                                      'txt_content': 'No days of the week selected',
+                                      'txt_color': 'white'},)
+                          change_window_pos_and_dim(self, 'scanSheetStatusWindow', dimensions= (500, 50))
 
                         case None:
                           pass
@@ -720,7 +736,7 @@ class Application(object):
                         else:
                           window_buttons = [{'type': 'textbox',
                                             'position': (5, 5),
-                                            'dimensions': (10, 490),
+                                            'dimensions': (10, 0),
                                             'text': '',
                                             'color': 'white'}]
                           yposition = 5
@@ -736,7 +752,7 @@ class Application(object):
                               continue
 
                             button = {'type': 'button', 
-                                      'dimensions': (700, 40), 
+                                      'dimensions': (650, 30), 
                                       'position': (5, yposition), 
                                       'bg_color': {'idle': 'black',
                                             'hover': (30, 30, 30),
@@ -747,14 +763,35 @@ class Application(object):
                                       'txt_color': {'idle': 'white',
                                             'hover': 'white',
                                             'clicked': 'black'},  
-                                      'txt_font': 'button_default', 
+                                      'txt_font': 'textbox', 
                                       'txt_align': 'left', 
                                       'txt_content': f'{error_string} error/s | {file}', 
                                       'elements': [], 
                                       'buttonID': file}
-                            yposition += 45
+                            yposition += 35
                             
                             window_buttons.append(button)
+
+                            close_button = {'type': 'button', 
+                                      'dimensions': (40, 40), 
+                                      'position': (670, 5), 
+                                      'bg_color': {'idle': 'black',
+                                            'hover': (30, 30, 30),
+                                            'clicked': 'white'}, 
+                                      'bd_color': {'idle': 'white',
+                                            'hover': 'black',
+                                            'clicked': 'black'}, 
+                                      'txt_color': {'idle': 'white',
+                                            'hover': 'white',
+                                            'clicked': 'black'},  
+                                      'txt_font': 'button_default', 
+                                      'txt_align': 'center', 
+                                      'txt_content': 'X', 
+                                      'flags': ['fixed'],
+                                      'elements': [], 
+                                      'buttonID': "CloseSheetStatusWindowButton"}
+                            
+                            window_buttons.append(close_button)
                           
                           self.ui_elements['windows'].append(
                             Window(self, self.display, 
@@ -811,7 +848,7 @@ class Application(object):
                                           'flags': ['stretch_to_contain', 'in_text_flow']
                           },
                           {'type': 'textbox', 
-                            'text': f'''AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHH''',
+                            'text': f'''AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHOHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAA''',
                                           'color': 'white', 
                                           'dimensions': (1, 2),
                                           'position': (25, 0),
@@ -843,8 +880,10 @@ class Application(object):
 
                 for element in reversed(window.elements.copy()):
                   if element['type'] == 'button':
-                    if element['content'].get_rect(offset=window.position).collidepoint(scale_pos(self, pygame.mouse.get_pos(), self.scale_lock)) and element['content'].state == 'clicked':
+                    if element['content'].get_rect(offset= get_absolute_offset(element['content'], window)).collidepoint(scale_pos(self, pygame.mouse.get_pos(), self.scale_lock)) and element['content'].state == 'clicked':
                       match element['content'].buttonID:
+                        case 'CloseSheetStatusWindowButton':
+                          close_window(self, 'SheetListWindow')
                         case _:
                           if element['content'].buttonID.find('.xlsx') != -1 or element['content'].buttonID.find('.xlsm') != -1:
                             print(f"opening file: {element['content'].buttonID}")
@@ -1906,7 +1945,10 @@ With: {extract_data(self, f'{employee_name_cell}InputBox')}   ?''',
                 if button.get_rect().collidepoint(scale_pos(self, pygame.mouse.get_pos(), self.scale_lock)) and button.state == 'clicked':
                   match button.buttonID:
                     case 'BackButton':
-                      return ['start_screen', [week_folder[3:5], week_folder[6:8], scanned_days, self.error_markers.copy()]]
+                      if week_folder == 'Testing':
+                        return ['start_screen', ['st', 'te', scanned_days, self.error_markers.copy()]]
+                      else:  
+                        return ['start_screen', [week_folder[3:5], week_folder[6:8], scanned_days, self.error_markers.copy()]]
                     case 'SaveButton':
                       if saved_days[active_sheet] == 0:
                         save_sheet(active_sheet)
@@ -1921,7 +1963,7 @@ With: {extract_data(self, f'{employee_name_cell}InputBox')}   ?''',
 
                 for element in reversed(window.elements.copy()):
                   if element['type'] == 'button':
-                    if element['content'].get_rect(offset=window.position).collidepoint(scale_pos(self, pygame.mouse.get_pos(), self.scale_lock)) and element['content'].state == 'clicked':
+                    if element['content'].get_rect(offset= get_absolute_offset(element['content'], window)).collidepoint(scale_pos(self, pygame.mouse.get_pos(), self.scale_lock)) and element['content'].state == 'clicked':
                       match element['content'].buttonID:
                         case 'MonSheetButton':  
                           change_sheet(0)
